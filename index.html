@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>경성대학교 미디어콘텐츠학과 대여 관리</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./config.local.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Kyungsung Media Contents</p>
+        <h1>기자재 · 강의실 대여</h1>
+      </div>
+      <div class="header-actions">
+        <span id="serviceBadge" class="status-badge"></span>
+        <button id="refreshBtn" class="ghost-button" type="button">새로고침</button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="side-panel">
+        <section class="profile-box">
+          <p id="configWarning" class="setup-warning"></p>
+
+          <div id="authPanel" class="auth-panel">
+            <label for="authEmail">이메일</label>
+            <input id="authEmail" type="email" placeholder="student@ks.ac.kr" autocomplete="email" />
+            <label for="authPassword">비밀번호</label>
+            <input id="authPassword" type="password" placeholder="8자 이상" autocomplete="current-password" />
+
+            <div class="auth-actions">
+              <button id="loginBtn" class="primary-button" type="button">로그인</button>
+              <button id="signupBtn" class="ghost-button" type="button">회원가입</button>
+            </div>
+          </div>
+
+          <div id="sessionPanel" class="session-panel">
+            <p id="currentUser"></p>
+            <button id="logoutBtn" class="ghost-button" type="button">로그아웃</button>
+          </div>
+
+          <label for="roleSelect">현재 권한</label>
+          <select id="roleSelect" disabled>
+            <option value="student">학생</option>
+            <option value="admin">관리자</option>
+          </select>
+
+          <div id="studentProfile" class="profile-fields">
+            <label for="studentName">이름</label>
+            <input id="studentName" type="text" value="홍길동" />
+            <label for="studentId">학번</label>
+            <input id="studentId" type="text" value="20240001" />
+            <label for="teamName">팀명</label>
+            <input id="teamName" type="text" value="콘텐츠랩" />
+          </div>
+        </section>
+
+        <nav class="nav-list" aria-label="주요 화면">
+          <button class="nav-item active" data-view="equipment" type="button">
+            <span>기자재 대여</span>
+            <small>재고 확인 및 신청</small>
+          </button>
+          <button class="nav-item" data-view="room" type="button">
+            <span>강의실 대여</span>
+            <small>시간표 확인 및 신청</small>
+          </button>
+          <button class="nav-item" data-view="status" type="button">
+            <span>대여 현황</span>
+            <small>내 신청과 전체 예약</small>
+          </button>
+          <button class="nav-item admin-only" data-view="admin" type="button">
+            <span>관리자</span>
+            <small>승인, 반납, 회원 관리</small>
+          </button>
+        </nav>
+      </aside>
+
+      <section class="content-area">
+        <section id="equipmentView" class="view active-view">
+          <div class="view-header">
+            <div>
+              <p class="eyebrow">Equipment</p>
+              <h2>기자재 대여 신청</h2>
+            </div>
+            <p class="view-note">신청 가능 시간: 평일 09:00-16:00</p>
+          </div>
+
+          <div id="equipmentGrid" class="item-grid"></div>
+
+          <form id="equipmentForm" class="request-form">
+            <h3>기자재 신청서</h3>
+            <div class="form-grid">
+              <label>
+                기자재
+                <select id="equipmentSelect" required></select>
+              </label>
+              <label>
+                수량
+                <input id="equipmentQty" type="number" min="1" value="1" required />
+              </label>
+              <label>
+                대여일
+                <input id="equipmentStart" type="date" required />
+              </label>
+              <label>
+                반납 예정일
+                <input id="equipmentReturn" type="date" required />
+              </label>
+            </div>
+            <label>
+              사용 목적
+              <textarea id="equipmentPurpose" rows="3" placeholder="촬영 수업 과제, 학과 행사 등" required></textarea>
+            </label>
+            <button class="primary-button" type="submit">기자재 신청</button>
+          </form>
+        </section>
+
+        <section id="roomView" class="view">
+          <div class="view-header">
+            <div>
+              <p class="eyebrow">Classroom</p>
+              <h2>강의실 대여 신청</h2>
+            </div>
+            <p class="view-note">예약 충돌은 자동으로 차단됩니다.</p>
+          </div>
+
+          <div id="roomGrid" class="room-grid"></div>
+
+          <form id="roomForm" class="request-form">
+            <h3>강의실 신청서</h3>
+            <div class="form-grid">
+              <label>
+                강의실
+                <select id="roomSelect" required></select>
+              </label>
+              <label>
+                사용일
+                <input id="roomDate" type="date" required />
+              </label>
+              <label>
+                시작 시간
+                <input id="roomStart" type="time" min="09:00" max="21:00" value="13:00" required />
+              </label>
+              <label>
+                종료 시간
+                <input id="roomEnd" type="time" min="09:30" max="22:00" value="15:00" required />
+              </label>
+            </div>
+            <label>
+              사용 목적
+              <textarea id="roomPurpose" rows="3" placeholder="팀 프로젝트 회의, 촬영 리허설 등" required></textarea>
+            </label>
+            <button class="primary-button" type="submit">강의실 신청</button>
+          </form>
+        </section>
+
+        <section id="statusView" class="view">
+          <div class="view-header">
+            <div>
+              <p class="eyebrow">Requests</p>
+              <h2>대여 현황</h2>
+            </div>
+            <div class="filter-row">
+              <button class="chip active" data-status-filter="all" type="button">전체</button>
+              <button class="chip" data-status-filter="pending" type="button">대기</button>
+              <button class="chip" data-status-filter="approved" type="button">승인</button>
+              <button class="chip" data-status-filter="returned" type="button">반납</button>
+            </div>
+          </div>
+          <div id="requestList" class="request-list"></div>
+        </section>
+
+        <section id="adminView" class="view">
+          <div class="view-header">
+            <div>
+              <p class="eyebrow">Admin</p>
+              <h2>관리자 대시보드</h2>
+            </div>
+            <p class="view-note">조교 및 복지부장 운영용</p>
+          </div>
+
+          <div class="admin-stats">
+            <div>
+              <strong id="pendingCount">0</strong>
+              <span>승인 대기</span>
+            </div>
+            <div>
+              <strong id="approvedCount">0</strong>
+              <span>이용 중</span>
+            </div>
+            <div>
+              <strong id="memberCount">0</strong>
+              <span>승인 회원</span>
+            </div>
+          </div>
+
+          <div class="admin-layout">
+            <section>
+              <h3>신청 관리</h3>
+              <div id="adminRequestList" class="request-list"></div>
+            </section>
+            <section>
+              <h3>회원 관리</h3>
+              <form id="memberForm" class="inline-form">
+                <input id="memberName" type="text" placeholder="이름" required />
+                <input id="memberId" type="text" placeholder="학번" required />
+                <input id="memberEmail" type="email" placeholder="이메일" required />
+                <select id="memberRole">
+                  <option value="student">학생</option>
+                  <option value="admin">관리자</option>
+                </select>
+                <button class="primary-button" type="submit">등록</button>
+              </form>
+              <div id="memberList" class="member-list"></div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
