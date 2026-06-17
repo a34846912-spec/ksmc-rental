@@ -126,14 +126,7 @@ async function getConfig() {
 async function initSupabase() {
   const config = await getConfig();
   if (!config) {
-    els.configWarning.textContent = "Supabase 설정이 필요합니다. README의 Vercel 환경변수 설정을 확인하세요.";
-    renderSignedOut();
-    renderAll();
-    return;
-  }
-
-  if (!window.supabase?.createClient) {
-    els.configWarning.textContent = "Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.";
+    els.configWarning.textContent = "Supabase 설정이 필요합니다.";
     renderSignedOut();
     renderAll();
     return;
@@ -142,14 +135,18 @@ async function initSupabase() {
   els.configWarning.textContent = "";
   db = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
 
-  const { data } = await db.auth.getSession();
-  session = data.session;
+  // 세션 체크
+  const { data: { session: initialSession } } = await db.auth.getSession();
+  session = initialSession;
 
+  // 인증 상태 변화 리스너
   db.auth.onAuthStateChange(async (_event, nextSession) => {
     session = nextSession;
+    // 상태가 변할 때(로그인/로그아웃) 반드시 데이터를 새로 불러옴
     await loadAppData();
   });
 
+  // 초기 데이터 로드
   await loadAppData();
 }
 
