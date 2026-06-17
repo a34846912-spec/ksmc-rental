@@ -336,7 +336,7 @@ function approvedEquipmentQuantity(equipmentId) {
 
 function availableEquipment(item) {
   if (!item) return 0;
-  const totalCount = Number(item.total || item.total_qty || 0);
+  const totalCount = Number(item.total_qty || 0);
   return totalCount - approvedEquipmentQuantity(item.id);
 }
 
@@ -347,7 +347,7 @@ function renderEquipment() {
           const available = availableEquipment(item);
           return `
             <article class="item-card">
-              <div class="meta-row"><span>${escapeHtml(item.category)}</span><span>총 ${item.total}개</span></div>
+              <div class="meta-row"><span>${escapeHtml(item.category)}</span><span>총 ${item.total_qty}개</span></div>
               <strong>${escapeHtml(item.name)}</strong>
               <span class="stock ${stockClass(available)}">대여 가능 ${available}개</span>
             </article>
@@ -699,9 +699,9 @@ els.equipmentForm.addEventListener("submit", async (event) => {
     equipment_id: equipment.id,
     quantity,
     start_date: els.equipmentStart.value,
-    return_date: els.equipmentReturn.value,
+    end_date: els.equipmentReturn.value, // return_date를 end_date로 변경하여 Not-Null 에러 해결
     purpose: els.equipmentPurpose.value.trim(),
-    applicant_auth_id: session.user.id,
+    applicant_auth_id: session.user.id, 
     applicant_name: applicant.applicant,
     student_id: applicant.studentId,
     team_name: applicant.team,
