@@ -818,6 +818,62 @@ els.memberList.addEventListener("click", async (event) => {
   if (button.dataset.action === "remove-member") await removeMember(button.dataset.id);
 });
 
+// ID 타입 오류를 해결하기 위해 기존 신청 제출 이벤트를 강제로 재정의(덮어쓰기)합니다.
+if (els.equipmentForm) {
+  els.equipmentForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!assertStudentCanApply()) return;
+
+    // Number()를 씌워 글자 형태와 숫자 형태의 ID를 완벽하게 매칭시킵니다.
+    const equipment = state.equipment.find(
+      (item) => Number(item.id) === Number(els.equipmentSelect.value)
+    );
+    const quantity = Number(els.equipmentQty.value);
+    const applicant = getApplicant();
+
+    if (!equipment) {
+      showToast("기자재를 선택하세요.");
+      return;
+    }
+
+    // 대여 가능 수량 계산 시 오류를 방지하기 위해 안전장치를 둡니다.
+    const totalCount = Number(equipment.total || equipment.total_qty || 0);
+    const available = totalCount - approvedEquipmentQuantity(equipment.id);
+
+    if (quantity < 1 || quantity > available) {
+      showToast("신청 수량이 대여 가능 수량을 초과했습니다.");
+      return;
+    }
+
+    if (els.equipmentReturn.value < els.equipmentStart.value) {
+      showToast("반납 예정일은 대여일 이후여야 합니다.");
+      return;
+    }
+
+    const { error } = await db.from("rental_requests").insert({
+      type: "equipment",
+      equipment_id: equipment.id,
+      quantity,
+      start_date: els.equipmentStart.value,
+      return_date: els.equipmentReturn.value,
+      purpose: els.equipmentPurpose.value.trim(),
+      applicant_auth_id: session.user.id,
+      applicant_name: applicant.applicant,
+      student_id: applicant.studentId,
+      team_name: applicant.team,
+    });
+
+    if (error) {
+      showToast(error.message);
+      return;
+    }
+
+    els.equipmentPurpose.value = "";
+    await loadAppData();
+    showToast("기자재 신청이 접수되었습니다.");
+  });
+}
+
 setDefaultDates();
 renderSignedOut();
 renderAll();
