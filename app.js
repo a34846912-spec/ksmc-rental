@@ -68,10 +68,7 @@ function today() {
 }
 
 function isServiceOpen() {
-  const now = new Date();
-  const day = now.getDay();
-  const hour = now.getHours();
-  return day >= 1 && day <= 5 && hour >= 9 && hour < 16;
+  return true;
 }
 
 function isAdmin() {
