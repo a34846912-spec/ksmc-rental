@@ -335,7 +335,9 @@ function approvedEquipmentQuantity(equipmentId) {
 }
 
 function availableEquipment(item) {
-  return item.total - approvedEquipmentQuantity(item.id);
+  if (!item) return 0;
+  const totalCount = Number(item.total || item.total_qty || 0);
+  return totalCount - approvedEquipmentQuantity(item.id);
 }
 
 function renderEquipment() {
@@ -673,7 +675,7 @@ els.equipmentForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!assertStudentCanApply()) return;
 
-  const equipment = state.equipment.find((item) => item.id === els.equipmentSelect.value);
+  const equipment = state.equipment.find((item) => Number(item.id) === Number(els.equipmentSelect.value));
   const quantity = Number(els.equipmentQty.value);
   const applicant = getApplicant();
 
