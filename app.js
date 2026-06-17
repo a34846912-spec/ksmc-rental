@@ -1530,56 +1530,6 @@ els.roomForm.addEventListener("submit", async (event) => {
 
 });
 
-
-
-els.adminRequestList.addEventListener("click", async (event) => {
-
-  const button = event.target.closest("button[data-action]");
-
-  if (!button) return;
-
-
-
-  const request = state.requests.find((item) => item.id === button.dataset.id);
-
-  if (!request) return;
-
-
-
-  if (button.dataset.action === "approve" && request.type === "equipment") {
-
-    const item = state.equipment.find((equipment) => equipment.id === request.itemId);
-
-    if (request.quantity > availableEquipment(item)) {
-
-      showToast("재고가 부족하여 승인할 수 없습니다.");
-
-      return;
-
-    }
-
-  }
-
-
-
-  const status = {
-
-    approve: "approved",
-
-    reject: "rejected",
-
-    return: "returned",
-
-  }[button.dataset.action];
-
-
-
-  if (status) await updateRequestStatus(request.id, status);
-
-});
-
-
-
 els.memberForm.addEventListener("submit", async (event) => {
 
   event.preventDefault();
@@ -1641,6 +1591,47 @@ setDefaultDates();
 renderSignedOut();
 renderAll();
 initSupabase();
+
+// 관리자 승인/반려/반납 통합 처리 (이벤트 위임 방식)
+els.adminRequestList.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+
+  const requestId = button.dataset.id;
+  const action = button.dataset.action;
+  
+  // 상태값 매핑
+  const statusMap = { approve: "approved", reject: "rejected", return: "returned" };
+  const newStatus = statusMap[action];
+  if (!newStatus) return;
+
+  // 버튼 비활성화 (로딩 표시)
+  button.disabled = true;
+  button.textContent = "처리 중...";
+
+  try {
+    // 만약 승인(approve) 시 기자재 재고 체크
+    if (action === "approve") {
+      const request = state.requests.find(r => r.id === requestId);
+      if (request?.type === "equipment") {
+        const item = state.equipment.find(e => e.id === request.itemId);
+        if (request.quantity > availableEquipment(item)) {
+          throw new Error("재고가 부족하여 승인할 수 없습니다.");
+        }
+      }
+    }
+
+    const { error } = await db.from("rental_requests").update({ status: newStatus }).eq("id", requestId);
+    if (error) throw error;
+
+    await loadAppData();
+    showToast("처리가 완료되었습니다.");
+  } catch (err) {
+    showToast(err.message);
+    button.disabled = false;
+    button.textContent = action === "approve" ? "승인" : action === "reject" ? "반려" : "반납";
+  }
+});
 
 window.setInterval(renderServiceState, 60_000);
 
