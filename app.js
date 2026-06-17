@@ -818,59 +818,51 @@ els.memberList.addEventListener("click", async (event) => {
   if (button.dataset.action === "remove-member") await removeMember(button.dataset.id);
 });
 
-// ID 타입 오류를 해결하기 위해 기존 신청 제출 이벤트를 강제로 재정의(덮어쓰기)합니다.
-if (els.equipmentForm) {
-  els.equipmentForm.addEventListener("submit", async (event) => {
+// 404 에러를 방지하기 위해 승인/반납 이벤트를 수파베이스 최소 기능으로 재정의합니다.
+if (els.adminRequestList) {
+  // 기존에 걸려있던 먹통 된 이벤트를 무력화하기 위해 복제 후 교체
+  const newAdminList = els.adminRequestList.cloneNode(true);
+  els.adminRequestList.parentNode.replaceChild(newAdminList, els.adminRequestList);
+
+  newAdminList.addEventListener("click", async (event) => {
+    const button = event.target.closest("button");
+    if (!button) return;
+
+    const requestId = button.dataset.id;
+    const action = button.dataset.action;
+    if (!requestId || !action) return;
+
     event.preventDefault();
-    if (!assertStudentCanApply()) return;
+    event.stopPropagation();
 
-    // Number()를 씌워 글자 형태와 숫자 형태의 ID를 완벽하게 매칭시킵니다.
-    const equipment = state.equipment.find(
-      (item) => Number(item.id) === Number(els.equipmentSelect.value)
-    );
-    const quantity = Number(els.equipmentQty.value);
-    const applicant = getApplicant();
+    // 버튼 종류에 따라 변경할 상태값 지정
+    let newStatus = "";
+    if (action === "approve") newStatus = "approved";
+    else if (action === "reject") newStatus = "rejected";
+    else if (action === "return") newStatus = "returned";
 
-    if (!equipment) {
-      showToast("기자재를 선택하세요.");
-      return;
-    }
+    if (!newStatus) return;
 
-    // 대여 가능 수량 계산 시 오류를 방지하기 위해 안전장치를 둡니다.
-    const totalCount = Number(equipment.total || equipment.total_qty || 0);
-    const available = totalCount - approvedEquipmentQuantity(equipment.id);
+    // 로딩 표시
+    button.disabled = true;
+    button.textContent = "처리 중...";
 
-    if (quantity < 1 || quantity > available) {
-      showToast("신청 수량이 대여 가능 수량을 초과했습니다.");
-      return;
-    }
-
-    if (els.equipmentReturn.value < els.equipmentStart.value) {
-      showToast("반납 예정일은 대여일 이후여야 합니다.");
-      return;
-    }
-
-    const { error } = await db.from("rental_requests").insert({
-      type: "equipment",
-      equipment_id: equipment.id,
-      quantity,
-      start_date: els.equipmentStart.value,
-      return_date: els.equipmentReturn.value,
-      purpose: els.equipmentPurpose.value.trim(),
-      applicant_auth_id: session.user.id,
-      applicant_name: applicant.applicant,
-      student_id: applicant.studentId,
-      team_name: applicant.team,
-    });
+    // [핵심] 404 에러를 피하기 위해 단일 테이블에 가장 직관적인 정수/문자열 매칭으로 업데이트 요청
+    const { error } = await db
+      .from("rental_requests")
+      .update({ status: newStatus })
+      .match({ id: requestId }); // eq 대신 match를 사용해 안전하게 접근
 
     if (error) {
-      showToast(error.message);
+      alert(`수파베이스 오류: ${error.message}`);
+      button.disabled = false;
+      button.textContent = button.dataset.action === "approve" ? "승인" : "반납";
       return;
     }
 
-    els.equipmentPurpose.value = "";
-    await loadAppData();
-    showToast("기자재 신청이 접수되었습니다.");
+    // 404를 유발하는 복잡한 loadAppData() 대신, 데이터베이스 반영 후 깔끔하게 화면 강제 새로고침
+    alert("처리가 완료되었습니다!");
+    window.location.reload();
   });
 }
 
