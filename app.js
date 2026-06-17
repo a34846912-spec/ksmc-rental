@@ -61,6 +61,7 @@ let profile = null;
 let state = structuredClone(fallbackState);
 let currentView = "equipment";
 let statusFilter = "all";
+let gradeFilter = "all";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
