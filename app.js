@@ -252,7 +252,7 @@ function normalizeRequests(rows) {
     itemName: row.equipment?.name || row.room?.name || "삭제된 항목",
     quantity: row.quantity,
     startDate: row.start_date,
-    returnDate: row.return_date,
+    returnDate: row.end_date,
     date: row.usage_date,
     startTime: row.start_time?.slice(0, 5),
     endTime: row.end_time?.slice(0, 5),
@@ -763,30 +763,6 @@ els.roomForm.addEventListener("submit", async (event) => {
   els.roomPurpose.value = "";
   await loadAppData();
   showToast("강의실 신청이 접수되었습니다.");
-});
-
-els.adminRequestList.addEventListener("click", async (event) => {
-  const button = event.target.closest("button[data-action]");
-  if (!button) return;
-
-  const request = state.requests.find((item) => item.id === button.dataset.id);
-  if (!request) return;
-
-  if (button.dataset.action === "approve" && request.type === "equipment") {
-    const item = state.equipment.find((equipment) => equipment.id === request.itemId);
-    if (request.quantity > availableEquipment(item)) {
-      showToast("재고가 부족하여 승인할 수 없습니다.");
-      return;
-    }
-  }
-
-  const status = {
-    approve: "approved",
-    reject: "rejected",
-    return: "returned",
-  }[button.dataset.action];
-
-  if (status) await updateRequestStatus(request.id, status);
 });
 
 els.memberForm.addEventListener("submit", async (event) => {
